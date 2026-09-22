@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Máquina de Aprendizaje - Duelo Horizontal MLOps</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono-code {
+      font-family: 'Fira Code', monospace;
+    }
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+    .flip-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+    .flipped .flip-card-inner {
+      transform: rotateY(180deg);
+    }
+    .flip-card-front, .flip-card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .flip-card-back {
+      transform: rotateY(180deg);
+    }
+    .slot-target-glow {
+      animation: slot-pulse 1.3s ease-in-out infinite alternate;
+    }
+    @keyframes slot-pulse {
+      0% { box-shadow: 0 0 6px rgba(56, 189, 248, 0.4); border-color: rgba(56, 189, 248, 0.8); }
+      100% { box-shadow: 0 0 16px rgba(56, 189, 248, 0.95); border-color: rgba(125, 211, 252, 1); }
+    }
+    .bug-pulse {
+      animation: pulse-bug 1.4s infinite;
+    }
+    @keyframes pulse-bug {
+      0%, 100% { border-color: rgba(244, 63, 94, 0.9); box-shadow: 0 0 14px rgba(244, 63, 94, 0.5); }
+      50% { border-color: rgba(244, 63, 94, 0.4); box-shadow: 0 0 4px rgba(244, 63, 94, 0.2); }
+    }
+    .shield-shine {
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-cyan-500 selection:text-white">
+
+  <header class="border-b border-slate-800 bg-slate-900/95 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-4 py-2.5 shadow-md">
+    <div class="max-w-[1820px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Mascot & Brand -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-fuchsia-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+          <i class="fa-solid fa-microchip text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-base font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300 bg-clip-text text-transparent">
+            Máquina de Aprendizaje
+          </h1>
+          <p class="text-[10px] text-slate-400 font-medium">Duelo Horizontal MLOps • 9 Casilleros del Pipeline</p>
+        </div>
+      </div>
+
+      <!-- Turn & Actions Center Widget -->
+      <div class="flex items-center gap-3 bg-slate-950/90 border border-slate-800 rounded-full px-4 py-1.5 shadow-inner">
+        <span id="turn-indicator-pill" class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-700">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+          Turno: <span id="current-player-label">Jugador 1</span>
+        </span>
+        <span class="text-xs text-slate-600 font-mono-code">|</span>
+        <span class="text-xs text-slate-300 font-mono-code font-semibold flex items-center gap-1.5">
+          <i class="fa-solid fa-bolt text-amber-400"></i> Acciones: <span id="actions-left-badge" class="text-emerald-400 font-bold text-sm">2</span>/2
+        </span>
+        <span class="text-xs text-slate-600 font-mono-code">|</span>
+        <span class="text-xs text-slate-400 font-mono-code flex items-center gap-1.5">
+          <i class="fa-solid fa-layer-group text-indigo-400"></i> Mazo: <span id="deck-count-text" class="text-slate-200 font-bold">42</span>
+        </span>
+      </div>
+
+      <!-- Top Tools & Actions -->
+      <div class="flex items-center gap-2">
+        <button id="btn-draw-card-top" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-cyan-900/80 hover:bg-cyan-800 text-cyan-200 border border-cyan-600/70 transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer">
+          <i class="fa-solid fa-plus-circle text-cyan-400"></i>
+          <span>Robar Carta (1 Acc.)</span>
+        </button>
+        <button id="btn-end-turn-top" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-600/60 transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer">
+          <i class="fa-solid fa-forward-step text-amber-400"></i>
+          <span>Pasar Turno</span>
+        </button>
+        <button id="btn-bgm-toggle" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-fuchsia-950/80 hover:bg-fuchsia-900 text-fuchsia-300 border border-fuchsia-700/60 transition flex items-center gap-1.5 active:scale-95 cursor-pointer" title="Activar/Desactivar Música Retro 8-bit">
+          <i id="bgm-icon" class="fa-solid fa-music"></i>
+          <span class="hidden sm:inline">Música Retro</span>
+        </button>
+        <button id="btn-sound-toggle" class="p-2 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition active:scale-95 cursor-pointer" title="Activar/Silenciar efectos de sonido">
+          <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+        </button>
+        <button id="btn-open-compendium" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
+          <i class="fa-solid fa-table-list text-indigo-400"></i>
+          <span class="hidden md:inline">Tabla de Cartas</span>
+        </button>
+        <button id="btn-open-rules" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
+          <i class="fa-solid fa-circle-question text-cyan-400"></i>
+          <span>Reglas</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-[1820px] w-full mx-auto p-2 sm:p-3 md:p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+    <!-- ==================== LEFT HALF: JUGADOR 1 ==================== -->
+    <section id="player1-arena" class="relative rounded-2xl border-2 border-cyan-500 bg-slate-900/80 p-3 sm:p-4 flex flex-col justify-between transition-all duration-300 shadow-xl ring-1 ring-cyan-500/20">
+      <!-- Player 1 Header Bar -->
+      <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-cyan-600/30 text-cyan-300 flex items-center justify-center font-bold text-xs border border-cyan-500/50 shadow">
+            J1
+          </div>
+          <div>
+            <h2 class="text-xs sm:text-sm font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-2">
+              Jugador 1
+              <span id="p1-active-pill" class="text-[10px] lowercase px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 font-medium">en turno</span>
+            </h2>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <span id="p1-slot-counter" class="text-xs font-mono-code px-2.5 py-1 rounded-md bg-slate-950 text-cyan-300 border border-slate-800 font-bold">
+            0/9 Espacios
+          </span>
+          <button id="p1-btn-deploy" class="px-3.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white disabled:opacity-30 disabled:pointer-events-none transition flex items-center gap-1.5 shadow cursor-pointer" disabled>
+            <i class="fa-solid fa-rocket text-[11px]"></i>
+            <span>Desplegar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Top Row of Player 1: TIPO DE TAREA Card (Flip card) -->
+      <div class="mb-3">
+        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-bullseye text-cyan-400"></i> Carta Superior: Tipo de Tarea</span>
+          <span class="text-[10px] text-cyan-400 font-normal">Haz clic para voltear</span>
+        </div>
+
+        <div id="p1-task-card-wrap" class="perspective-1000 h-24 sm:h-28 w-full cursor-pointer group">
+          <div id="p1-task-flip" class="flip-card-inner rounded-xl shadow-lg border border-slate-700/80 group-hover:border-cyan-500/80 transition-colors">
+            <!-- Front of Card: Face Down (Cover) -->
+            <div class="flip-card-front rounded-xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 p-3.5 flex items-center justify-between border border-cyan-800/40">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-slate-800/90 border border-cyan-500/40 flex items-center justify-center text-cyan-400 text-2xl shadow-inner">
+                  <i class="fa-solid fa-question animate-pulse"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-bold text-white">Carta de Tipo de Tarea</h4>
+                  <p class="text-[11px] text-slate-400">Haz clic para revelar el desafío de Machine Learning</p>
+                </div>
+              </div>
+              <span class="text-xs px-3 py-1.5 rounded-lg bg-cyan-950 text-cyan-300 border border-cyan-700 font-mono-code font-bold flex items-center gap-1">
+                VOLTEAR <i class="fa-solid fa-rotate mr-0.5"></i>
+              </span>
+            </div>
+
+            <!-- Back of Card: Face Up (Revealed Task) -->
+            <div id="p1-task-content" class="flip-card-back rounded-xl bg-gradient-to-br from-indigo-950 via-slate-900 to-cyan-950 p-3 flex items-center justify-between border-2 border-cyan-500 shadow-lg">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: 9 CASILLEROS (3x3 Grid) -->
+      <div class="mb-3">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-table-cells-large text-cyan-400"></i>
+            Pipeline de 9 Casilleros (Columna 1: Espacios)
+          </span>
+          <span class="text-[10px] text-slate-400">Instala con Col 2 • Potencia/Protege con Col 4</span>
+        </div>
+        <div id="p1-slots-grid" class="grid grid-cols-3 gap-2 sm:gap-2.5">
+          <!-- 9 slots generated by renderPipelineSlots(1) -->
+        </div>
+      </div>
+
+      <!-- Bottom: MANO ACTUAL (Player 1) -->
+      <div class="bg-slate-950/90 rounded-xl border border-slate-800 p-2.5 mt-auto shadow-inner">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-id-card"></i>
+            Mano Actual: Jugador 1 (<span id="p1-hand-count">4</span>/10 cartas máx.)
+          </span>
+          <span class="text-[10px] text-slate-400">Límite de mano: 10 cartas • Toca para seleccionar</span>
+        </div>
+        <div id="p1-hand-strip" class="flex items-center gap-2 overflow-x-auto pb-1.5 min-h-[145px]">
+          <!-- Hand cards generated here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== RIGHT HALF: JUGADOR 2 ==================== -->
+    <section id="player2-arena" class="relative rounded-2xl border-2 border-slate-800 bg-slate-900/50 p-3 sm:p-4 flex flex-col justify-between transition-all duration-300 shadow-xl opacity-60">
+      <!-- Player 2 Header Bar -->
+      <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-rose-600/30 text-rose-300 flex items-center justify-center font-bold text-xs border border-rose-500/50 shadow">
+            J2
+          </div>
+          <div>
+            <h2 class="text-xs sm:text-sm font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2">
+              Jugador 2
+              <span id="p2-active-pill" class="text-[10px] lowercase px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-medium hidden">espera</span>
+            </h2>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <span id="p2-slot-counter" class="text-xs font-mono-code px-2.5 py-1 rounded-md bg-slate-950 text-rose-300 border border-slate-800 font-bold">
+            0/9 Espacios
+          </span>
+          <button id="p2-btn-deploy" class="px-3.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white disabled:opacity-30 disabled:pointer-events-none transition flex items-center gap-1.5 shadow cursor-pointer" disabled>
+            <i class="fa-solid fa-rocket text-[11px]"></i>
+            <span>Desplegar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Top Row of Player 2: TIPO DE TAREA Card -->
+      <div class="mb-3">
+        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-bullseye text-rose-400"></i> Carta Superior: Tipo de Tarea</span>
+          <span class="text-[10px] text-rose-400 font-normal">Haz clic para voltear</span>
+        </div>
+
+        <div id="p2-task-card-wrap" class="perspective-1000 h-24 sm:h-28 w-full cursor-pointer group">
+          <div id="p2-task-flip" class="flip-card-inner rounded-xl shadow-lg border border-slate-700/80 group-hover:border-rose-500/80 transition-colors">
+            <!-- Front of Card: Face Down -->
+            <div class="flip-card-front rounded-xl bg-gradient-to-br from-slate-900 via-rose-950/30 to-slate-950 p-3.5 flex items-center justify-between border border-rose-800/40">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-slate-800/90 border border-rose-500/40 flex items-center justify-center text-rose-400 text-2xl shadow-inner">
+                  <i class="fa-solid fa-question animate-pulse"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-bold text-white">Carta de Tipo de Tarea</h4>
+                  <p class="text-[11px] text-slate-400">Haz clic para revelar el desafío de Machine Learning</p>
+                </div>
+              </div>
+              <span class="text-xs px-3 py-1.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-700 font-mono-code font-bold flex items-center gap-1">
+                VOLTEAR <i class="fa-solid fa-rotate mr-0.5"></i>
+              </span>
+            </div>
+
+            <!-- Back of Card: Face Up -->
+            <div id="p2-task-content" class="flip-card-back rounded-xl bg-gradient-to-br from-rose-950 via-slate-900 to-indigo-950 p-3 flex items-center justify-between border-2 border-rose-500 shadow-lg">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: 9 CASILLEROS (Player 2) -->
+      <div class="mb-3">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-table-cells-large text-rose-400"></i>
+            Pipeline de 9 Casilleros (Columna 1: Espacios)
+          </span>
+          <span class="text-[10px] text-slate-400">Instala con Col 2 • Potencia/Protege con Col 4</span>
+        </div>
+        <div id="p2-slots-grid" class="grid grid-cols-3 gap-2 sm:gap-2.5">
+          <!-- 9 slots generated by renderPipelineSlots(2) -->
+        </div>
+      </div>
+
+      <!-- Bottom: MANO ACTUAL (Player 2) -->
+      <div class="bg-slate-950/90 rounded-xl border border-slate-800 p-2.5 mt-auto shadow-inner">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-id-card"></i>
+            Mano Actual: Jugador 2 (<span id="p2-hand-count">4</span>/10 cartas máx.)
+          </span>
+          <span class="text-[10px] text-slate-400">Límite de mano: 10 cartas • Toca para seleccionar</span>
+        </div>
+        <div id="p2-hand-strip" class="flex items-center gap-2 overflow-x-auto pb-1.5 min-h-[145px]">
+          <!-- Hand cards generated here -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800 bg-slate-950 px-4 py-2.5 text-xs">
+    <div class="max-w-[1820px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      <!-- Quick instructions reminder -->
+      <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+        <span class="font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1">
+          <i class="fa-solid fa-shield text-emerald-400"></i> Mecánica de Refuerzo (Col 4):
+        </span>
+        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300">1 Refuerzo absorbe 1 Bug</span>
+        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300">2 Refuerzos blindan (inmune)</span>
+        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300">Cura bugs activos</span>
+      </div>
+
+      <!-- Live Terminal Widget -->
+      <div class="flex items-center gap-2 text-[11px] font-mono-code text-slate-300 bg-slate-900/90 border border-slate-800 px-3 py-1 rounded-lg">
+        <span class="text-cyan-400 font-bold flex items-center gap-1"><i class="fa-solid fa-terminal text-[10px]"></i> MLOps:</span>
+        <span id="terminal-last-message" class="text-slate-300 truncate max-w-md sm:max-w-xl">Sistema inicializado. Haz clic en "Voltear" en tu carta de Tarea para comenzar.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL: Compendio / Tabla Completa de Cartas (4 Columnas) -->
+  <div id="compendium-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-table-list text-cyan-400 text-lg"></i>
+          <h3 class="text-sm sm:text-base font-bold text-white">Tabla Oficial de Cartas del Juego (4 Columnas)</h3>
+        </div>
+        <button id="btn-close-compendium" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-4 overflow-y-auto flex-1 text-xs">
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-950 text-slate-300 border-b border-slate-800 font-mono-code text-[11px]">
+                <th class="p-2.5 border-r border-slate-800">1. Sección Pipeline</th>
+                <th class="p-2.5 border-r border-slate-800 text-blue-400">2. Componentes Base</th>
+                <th class="p-2.5 border-r border-slate-800 text-rose-400">3. Cartas para Dañar (Bugs)</th>
+                <th class="p-2.5 text-emerald-400">4. Refuerzo / Calidad</th>
+              </tr>
+            </thead>
+            <tbody id="compendium-table-body" class="divide-y divide-slate-800 text-slate-300">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-950 border-t border-slate-800 text-right">
+        <button id="btn-close-compendium-footer" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer">
+          Cerrar Tabla
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Reglamento Oficial -->
+  <div id="rules-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-book-open text-cyan-400 text-lg"></i>
+          <h3 class="text-sm sm:text-base font-bold text-white">Reglamento Oficial: Máquina de Aprendizaje</h3>
+        </div>
+        <button id="btn-close-rules" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-3.5 text-xs sm:text-sm text-slate-300 leading-relaxed">
+        <div class="bg-cyan-950/40 border border-cyan-800/60 p-3 rounded-xl">
+          <h4 class="font-bold text-cyan-300 mb-1">🎯 Objetivo del Duelo</h4>
+          <p class="text-xs text-slate-300">
+            Completar los <strong>9 casilleros del pipeline</strong> de tu lado según la tarea asignada, proteger tus componentes frente a los bugs y presionar <strong>"Desplegar"</strong> para enviar el modelo a producción.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 mb-1">1. Carta Superior: Tipo de Tarea</h4>
+          <p class="text-xs text-slate-400">
+            Al inicio, cada jugador debe voltear su carta para descubrir su objetivo de Machine Learning: <strong>Clasificación Binaria, Clasificación Multiclase, Regresión Lineal, Regresión Polinomial o Clustering</strong>.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 mb-1">2. Los 9 Casilleros del Pipeline</h4>
+          <p class="text-xs text-slate-400">
+            Deben llenarse en orden libre con cartas de la <strong>Columna 2 (Componentes)</strong> correspondientes a su sección: <em>Base de Datos y Calidad, Feature Engineering, Data Split, Escalamiento, Modelo ML, Hiperparámetros, Pérdida, Optimizador y Métrica</em>.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 mb-1">3. Cartas de Refuerzo / Calidad (Columna 4)</h4>
+          <ul class="list-disc pl-5 space-y-1 text-xs text-slate-300">
+            <li>Puedes equipar Refuerzos sobre tu componente en cualquier momento (ej: <em>Alta Accuracy</em> sobre <em>Accuracy</em>).</li>
+            <li><strong>1 Refuerzo:</strong> Si el rival te lanza un Bug (Columna 3), el bug consume el refuerzo y lo descarta, protegiendo tu componente intacto.</li>
+            <li><strong>2 Refuerzos:</strong> El casillero queda <strong>Blindado</strong> con un escudo permanente; ningún sabotaje puede afectarlo.</li>
+            <li><strong>Si ya tienes un Bug:</strong> Jugar un Refuerzo correspondiente cura y elimina el bug de inmediato.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 mb-1">4. Turno de Juego (2 Acciones)</h4>
+          <p class="text-xs text-slate-400">
+            En tu turno dispones de <strong>2 acciones</strong>. Puedes colocar componentes, sabotear casilleros del oponente con bugs, potenciar/curar con refuerzos, robar cartas adicionales del mazo o <strong>descartar cartas de tu mano (<i class="fa-solid fa-trash-can text-rose-400"></i> cuesta 1 acción)</strong>. Al pulsar <strong>"Pasar Turno"</strong>, se reponen automáticamente las cartas en mano hasta tener al menos 4.
+          </p>
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-950 border-t border-slate-800 text-right">
+        <button id="btn-close-rules-footer" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Banner -->
+  <div id="toast" class="fixed bottom-12 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none max-w-sm w-full">
+    <div id="toast-box" class="bg-slate-900 border border-cyan-500 shadow-2xl rounded-xl p-3 flex items-center gap-3">
+      <div id="toast-icon" class="text-cyan-400 text-lg"><i class="fa-solid fa-circle-info"></i></div>
+      <div class="flex-1">
+        <h5 id="toast-title" class="text-xs font-bold text-white">Notificación</h5>
+        <p id="toast-message" class="text-[11px] text-slate-300">Mensaje del sistema</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Web Audio engine
+    let audioCtx = null;
+    let soundEnabled = true;
+    let bgmEnabled = false;
+    let bgmTimer = null;
+    let bgmNoteIndex = 0;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    // Melodía retro suave, cálida y extensa (duración ~60 segundos por ciclo completo)
+    const RETRO_MELODY = [
+      // Frase 1: Introducción y atmósfera (C - Em)
+      { f: 261.63, d: 0.32 }, { f: 329.63, d: 0.32 }, { f: 392.00, d: 0.32 }, { f: 523.25, d: 0.48 },
+      { f: 392.00, d: 0.32 }, { f: 329.63, d: 0.32 }, { f: 261.63, d: 0.32 }, { f: 329.63, d: 0.32 },
+      { f: 329.63, d: 0.32 }, { f: 392.00, d: 0.32 }, { f: 493.88, d: 0.32 }, { f: 587.33, d: 0.48 },
+      { f: 493.88, d: 0.32 }, { f: 392.00, d: 0.32 }, { f: 329.63, d: 0.32 }, { f: 392.00, d: 0.32 },
+
+      // Frase 2: Progresión melódica (Am - F)
+      { f: 220.00, d: 0.32 }, { f: 261.63, d: 0.32 }, { f: 329.63, d: 0.32 }, { f: 440.00, d: 0.48 },
+      { f: 329.63, d: 0.32 }, { f: 261.63, d: 0.32 }, { f: 220.00, d: 0.32 }, { f: 261.63, d: 0.32 },
+      { f: 174.61, d: 0.32 }, { f: 220.00, d: 0.32 }, { f: 261.63, d: 0.32 }, { f: 349.23, d: 0.48 },
+      { f: 261.63, d: 0.32 }, { f: 220.00, d: 0.32 }, { f: 196.00, d: 0.32 }, { f: 246.94, d: 0.32 },
+
+      // Frase 3: Desarrollo armónico alegre (C - G - Am - G)
+      { f: 523.25, d: 0.28 }, { f: 587.33, d: 0.28 }, { f: 659.25, d: 0.36 }, { f: 523.25, d: 0.28 },
+      { f: 392.00, d: 0.32 }, { f: 440.00, d: 0.32 }, { f: 392.00, d: 0.48 }, { f: 329.63, d: 0.32 },
+      { f: 440.00, d: 0.28 }, { f: 523.25, d: 0.28 }, { f: 587.33, d: 0.36 }, { f: 440.00, d: 0.28 },
+      { f: 392.00, d: 0.32 }, { f: 329.63, d: 0.32 }, { f: 293.66, d: 0.48 }, { f: 261.63, d: 0.32 },
+
+      // Frase 4: Puente rítmico dulce (Dm - G7 - C)
+      { f: 293.66, d: 0.32 }, { f: 349.23, d: 0.32 }, { f: 440.00, d: 0.32 }, { f: 523.25, d: 0.44 },
+      { f: 440.00, d: 0.28 }, { f: 349.23, d: 0.28 }, { f: 293.66, d: 0.32 }, { f: 246.94, d: 0.32 },
+      { f: 196.00, d: 0.32 }, { f: 246.94, d: 0.32 }, { f: 293.66, d: 0.32 }, { f: 392.00, d: 0.44 },
+      { f: 349.23, d: 0.28 }, { f: 293.66, d: 0.28 }, { f: 261.63, d: 0.48 }, { f: 0,      d: 0.16 },
+
+      // Frase 5: Tema principal en octava alta (sensación de aventura retro)
+      { f: 523.25, d: 0.30 }, { f: 659.25, d: 0.30 }, { f: 783.99, d: 0.30 }, { f: 1046.5, d: 0.48 },
+      { f: 880.00, d: 0.30 }, { f: 783.99, d: 0.30 }, { f: 659.25, d: 0.30 }, { f: 587.33, d: 0.30 },
+      { f: 523.25, d: 0.30 }, { f: 440.00, d: 0.30 }, { f: 392.00, d: 0.30 }, { f: 523.25, d: 0.48 },
+      { f: 440.00, d: 0.30 }, { f: 392.00, d: 0.30 }, { f: 329.63, d: 0.30 }, { f: 293.66, d: 0.30 },
+
+      // Frase 6: Variación cálida arpegiada (Fmaj7 - Em7 - Dm7 - G)
+      { f: 349.23, d: 0.28 }, { f: 440.00, d: 0.28 }, { f: 523.25, d: 0.28 }, { f: 659.25, d: 0.40 },
+      { f: 329.63, d: 0.28 }, { f: 392.00, d: 0.28 }, { f: 493.88, d: 0.28 }, { f: 587.33, d: 0.40 },
+      { f: 293.66, d: 0.28 }, { f: 349.23, d: 0.28 }, { f: 440.00, d: 0.28 }, { f: 523.25, d: 0.40 },
+      { f: 246.94, d: 0.28 }, { f: 293.66, d: 0.28 }, { f: 392.00, d: 0.28 }, { f: 493.88, d: 0.40 },
+
+      // Frase 7: Cierre y retorno cíclico suave a C
+      { f: 523.25, d: 0.36 }, { f: 493.88, d: 0.24 }, { f: 440.00, d: 0.24 }, { f: 392.00, d: 0.36 },
+      { f: 349.23, d: 0.24 }, { f: 329.63, d: 0.24 }, { f: 293.66, d: 0.36 }, { f: 261.63, d: 0.48 },
+      { f: 329.63, d: 0.32 }, { f: 392.00, d: 0.32 }, { f: 523.25, d: 0.60 }, { f: 0,      d: 0.20 }
+    ];
+
+    function playRetroBgmStep() {
+      if (!bgmEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+
+      const note = RETRO_MELODY[bgmNoteIndex];
+      bgmNoteIndex = (bgmNoteIndex + 1) % RETRO_MELODY.length;
+
+      if (note.f > 0) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        // Usamos onda triangular y envolvente suave para un sonido retro apacible
+        osc.type = 'triangle';
+        const now = ctx.currentTime;
+        osc.frequency.setValueAtTime(note.f, now);
+        gain.gain.setValueAtTime(0.015, now);
+        gain.gain.exponentialRampToValueAtTime(0.0015, now + note.d * 0.94);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + note.d);
+      }
+
+      bgmTimer = setTimeout(playRetroBgmStep, note.d * 1000);
+    }
+
+    function toggleRetroBgm() {
+      bgmEnabled = !bgmEnabled;
+      const icon = document.getElementById('bgm-icon');
+      const btn = document.getElementById('btn-bgm-toggle');
+      if (bgmEnabled) {
+        getAudioContext();
+        bgmNoteIndex = 0;
+        playRetroBgmStep();
+        if (icon) icon.className = "fa-solid fa-volume-high animate-bounce";
+        if (btn) btn.className = "px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-fuchsia-600 text-white border border-fuchsia-400 transition flex items-center gap-1.5 shadow-lg shadow-fuchsia-500/40 active:scale-95 cursor-pointer";
+        showToast('Música Retro Activada', 'Sonando chiptune 8-bit sintetizado.', 'fa-solid fa-music');
+      } else {
+        if (bgmTimer) clearTimeout(bgmTimer);
+        if (icon) icon.className = "fa-solid fa-music";
+        if (btn) btn.className = "px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-fuchsia-950/80 hover:bg-fuchsia-900 text-fuchsia-300 border border-fuchsia-700/60 transition flex items-center gap-1.5 active:scale-95 cursor-pointer";
+        showToast('Música Retro Pausada', 'Música de fondo silenciada.', 'fa-solid fa-pause');
+      }
+    }
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+
+        if (type === 'flip') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.16);
+        } else if (type === 'play') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.08);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.19);
+        } else if (type === 'reinforce') {
+          [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.05);
+            gain.gain.setValueAtTime(0.1, now + i * 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.15);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + i * 0.05);
+            osc.stop(now + i * 0.05 + 0.16);
+          });
+        } else if (type === 'bug') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.22);
+        } else if (type === 'victory') {
+          [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + i * 0.12);
+            gain.gain.setValueAtTime(0.15, now + i * 0.12);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.35);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + i * 0.12);
+            osc.stop(now + i * 0.12 + 0.36);
+          });
+        } else if (type === 'draw') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(350, now);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.09);
+        }
+      } catch (err) {
+        console.warn("Audio error:", err);
+      }
+    }
+
+    const TASK_TYPES = [
+      {
+        id: 'clf_binary',
+        category: 'classification',
+        name: 'Clasificación Binaria',
+        badge: '🎯 Supervisado',
+        desc: 'Predecir 2 categorías discretas (Fraude/No Fraude, Benigno/Maligno).',
+        compatibleDatasets: ['c_db_cancer', 'c_db_fraud'],
+        icon: 'fa-bullseye'
+      },
+      {
+        id: 'clf_multi',
+        category: 'classification',
+        name: 'Clasificación Multiclase',
+        badge: '🎯 Supervisado',
+        desc: 'Reconocer múltiples clases excluyentes (Dígitos MNIST 0 al 9, Especies Iris).',
+        compatibleDatasets: ['c_db_mnist', 'c_db_iris'],
+        icon: 'fa-cubes'
+      },
+      {
+        id: 'reg_linear',
+        category: 'regression',
+        name: 'Regresión Lineal / Múltiple',
+        badge: '📈 Supervisado',
+        desc: 'Estimar valores continuos con relaciones lineales (California Housing).',
+        compatibleDatasets: ['c_db_housing', 'c_db_boston'],
+        icon: 'fa-chart-line'
+      },
+      {
+        id: 'reg_poly',
+        category: 'regression',
+        name: 'Regresión No Lineal / Polinomial',
+        badge: '📈 Supervisado',
+        desc: 'Modelar curvas y dinámicas complejas (Aceleración Crash Test).',
+        compatibleDatasets: ['c_db_motorcycle', 'c_db_delivery'],
+        icon: 'fa-wave-square'
+      },
+      {
+        id: 'clustering',
+        category: 'clustering',
+        name: 'Clustering No Supervisado',
+        badge: '🧩 No Supervisado',
+        desc: 'Agrupar instancias por similitud sin etiquetas previas (Mall Customers).',
+        compatibleDatasets: ['c_db_mall', 'c_db_wine'],
+        icon: 'fa-circle-nodes'
+      }
+    ];
+
+    const PIPELINE_SECTIONS = [
+      { id: 'database', name: 'Base de Datos y Calidad', icon: 'fa-database', order: 1 },
+      { id: 'feature_eng', name: 'Feature Engineering', icon: 'fa-wand-magic-sparkles', order: 2 },
+      { id: 'split', name: 'Data Split', icon: 'fa-scissors', order: 3 },
+      { id: 'scaling', name: 'Escalamiento', icon: 'fa-ruler-combined', order: 4 },
+      { id: 'model', name: 'Selección de Modelo ML', icon: 'fa-brain', order: 5 },
+      { id: 'hyperparams', name: 'Hiperparámetros', icon: 'fa-sliders', order: 6 },
+      { id: 'loss', name: 'Función de Pérdida', icon: 'fa-chart-area', order: 7 },
+      { id: 'optimizer', name: 'Optimizador', icon: 'fa-bolt', order: 8 },
+      { id: 'metrics', name: 'Selección de Métrica', icon: 'fa-award', order: 9 },
+    ];
+
+    const MASTER_CARDS = [
+      // 1. BASE DE DATOS Y CALIDAD (Incluye Ingesta y Limpieza Integrada)
+      { id: 'c_db_mnist', name: 'MNIST Digits Dataset', section: 'database', column: 2, taskLabel: 'Clasificación Multiclase', taskBadge: 'Clasif. Multiclase', compatibleTasks: ['clf_multi'], desc: '70,000 imágenes 28x28 de dígitos manuscritos del 0 al 9.' },
+      { id: 'c_db_iris', name: 'Iris Flower Dataset', section: 'database', column: 2, taskLabel: 'Clasificación Multiclase', taskBadge: 'Clasif. Multiclase', compatibleTasks: ['clf_multi'], desc: '150 ejemplares con 4 atributos para clasificar especies.' },
+      { id: 'c_db_cancer', name: 'Wisconsin Breast Cancer', section: 'database', column: 2, taskLabel: 'Clasificación Binaria', taskBadge: 'Clasif. Binaria', compatibleTasks: ['clf_binary'], desc: '30 atributos biomédicos para diagnosticar Benigno vs Maligno.' },
+      { id: 'c_db_fraud', name: 'Credit Card Fraud Data', section: 'database', column: 2, taskLabel: 'Clasificación Binaria', taskBadge: 'Clasif. Binaria', compatibleTasks: ['clf_binary'], desc: 'Transacciones con PCA para detección de anomalías de fraude.' },
+      { id: 'c_db_housing', name: 'California Housing', section: 'database', column: 2, taskLabel: 'Regresión Lineal', taskBadge: 'Regresión Lineal', compatibleTasks: ['reg_linear'], desc: 'Distritos censales para predecir precios continuos de inmuebles.' },
+      { id: 'c_db_boston', name: 'Boston Real Estate', section: 'database', column: 2, taskLabel: 'Regresión Lineal', taskBadge: 'Regresión Lineal', compatibleTasks: ['reg_linear'], desc: 'Variables socioeconómicas para estimar el valor mediano.' },
+      { id: 'c_db_motorcycle', name: 'Motorcycle Crash Impact', section: 'database', column: 2, taskLabel: 'Regresión Polinomial', taskBadge: 'Regresión Polinomial', compatibleTasks: ['reg_poly'], desc: 'Curvas de aceleración cefálica que requieren ajuste no lineal.' },
+      { id: 'c_db_delivery', name: 'Delivery Time Predictor', section: 'database', column: 2, taskLabel: 'Regresión Polinomial', taskBadge: 'Regresión Polinomial', compatibleTasks: ['reg_poly'], desc: 'Tiempos de entrega con factores de saturación de tráfico.' },
+      { id: 'c_db_mall', name: 'Mall Customer Clusters', section: 'database', column: 2, taskLabel: 'Clustering', taskBadge: 'Clustering', compatibleTasks: ['clustering'], desc: 'Ingresos y puntuación de gasto para segmentación de clientes.' },
+      { id: 'c_db_wine', name: 'Wine Cultivars Cluster', section: 'database', column: 2, taskLabel: 'Clustering', taskBadge: 'Clustering', compatibleTasks: ['clustering'], desc: 'Análisis químico de vinos para descubrir clústeres naturales.' },
+
+      // BUGS Y SABOTAJES: BASE DE DATOS Y CALIDAD
+      { id: 'b_db_nan', name: 'Valores Faltantes (NaNs Invasivos)', section: 'database', column: 3, desc: 'Nulos no gestionados que interrumpen la ingesta y bloquean algoritmos.' },
+      { id: 'b_db_outlier', name: 'Outliers Extremos No Tratados', section: 'database', column: 3, desc: 'Registros desorbitados o ruido instrumental que distorsiona la distribución.' },
+      { id: 'b_db_spurious', name: 'Distorsión de Objetivo / Patrones Espurios', section: 'database', column: 3, desc: 'El dataset contiene artefactos espurios (ej: bordes de escaneo o ruido irrelevante) que desvían el foco del problema.' },
+      { id: 'b_db_1', name: 'Data no representativa', section: 'database', column: 3, desc: 'Sesgo muestral severo que distorsiona el aprendizaje.' },
+      { id: 'b_db_2', name: 'Poca data', section: 'database', column: 3, desc: 'Muestra insuficiente, produce ruido y alta varianza.' },
+
+      // REFUERZOS Y CALIDAD: BASE DE DATOS Y CALIDAD
+      { id: 'r_db_imput_mean', name: 'Imputación por Media / Mediana', section: 'database', column: 4, desc: 'Refuerzo de calidad: Rellena y depura registros nulos preservando tendencia.' },
+      { id: 'r_db_imput_rob', name: 'Imputación Robusta Iterativa', section: 'database', column: 4, desc: 'Refuerzo de calidad: Imputación multivariada avanzada inmune a ruido.' },
+      { id: 'r_db_iqr', name: 'Filtro IQR / Detección de Outliers', section: 'database', column: 4, desc: 'Refuerzo de calidad: Limpia registros atípicos fuera de los rangos intercuartiles.' },
+      { id: 'r_db_curated', name: 'Curaduría y Re-anotación de Ground Truth', section: 'database', column: 4, desc: 'Refuerzo de calidad: Realinea el objetivo de la tarea eliminando patrones y artefactos espurios.' },
+      { id: 'r_db_strat', name: 'Muestreo Estratificado / Data Augmentation', section: 'database', column: 4, desc: 'Refuerzo de calidad: Balancea clases raras y sintetiza datos para robustecer la muestra.' },
+
+      // 2. FEATURE ENGINEERING (Ingeniería y Selección de Características)
+      { id: 'c_fe_selectk', name: 'SelectKBest / Univariate Selection', section: 'feature_eng', column: 2, taskBadge: 'Selección Univariada', desc: 'Selecciona las K mejores características evaluando tests estadísticos independientes (F-test).' },
+      { id: 'c_fe_rfe', name: 'RFE - Recursive Feature Elimination', section: 'feature_eng', column: 2, taskBadge: 'Selección Iterativa', desc: 'Poda recursivamente variables menos informativas entrenando modelos predictivos base.' },
+      { id: 'c_fe_pca', name: 'PCA - Extracción de Características', section: 'feature_eng', column: 2, taskBadge: 'Extracción Lineal', desc: 'Proyecta el espacio en componentes ortogonales que retienen la máxima varianza.' },
+      { id: 'c_fe_poly', name: 'Polynomial Features & Interacciones', section: 'feature_eng', column: 2, taskBadge: 'Ingeniería No Lineal', desc: 'Crea combinaciones de productos cruzados de atributos para modelar curvatura.' },
+
+      // BUGS Y SABOTAJES: FEATURE ENGINEERING
+      { id: 'b_fe_multicol', name: 'Multicolinealidad Severa', section: 'feature_eng', column: 3, desc: 'Variables redundantes altamente correlacionadas que inflan varianza y desestabilizan pesos.' },
+      { id: 'b_fe_leakage', name: 'Target Leakage en Features', section: 'feature_eng', column: 3, desc: 'Variables sintéticas incorporan información directa de la etiqueta del objetivo.' },
+      { id: 'b_fe_noise', name: 'Explosión de Features Ruidosas', section: 'feature_eng', column: 3, desc: 'Demasiadas columnas irrelevantes que ahogan la señal real y dispersan el espacio.' },
+
+      // REFUERZOS Y CALIDAD: FEATURE ENGINEERING
+      { id: 'r_fe_rf_importance', name: 'SelectFromModel con Random Forest', section: 'feature_eng', column: 4, desc: 'Refuerzo de calidad: Conserva solo variables con alta importancia intrínseca de ensamble.' },
+      { id: 'r_fe_lasso', name: 'Poda Sparsity L1 (Lasso Filter)', section: 'feature_eng', column: 4, desc: 'Refuerzo de calidad: Lleva a cero coeficientes de variables irrelevantes y redundantes.' },
+      { id: 'r_fe_domain', name: 'Curaduría por Conocimiento Experto', section: 'feature_eng', column: 4, desc: 'Refuerzo de calidad: Auditoría de variables con criterio de dominio que previene fugas y colinealidad.' },
+
+      // 3. DATA SPLIT
+      { id: 'c_sp_1', name: 'Hold-out Train/Test Split', section: 'split', column: 2, desc: 'Partición clásica de evaluación 80/20.' },
+      { id: 'c_sp_2', name: 'K-Fold Cross Validation', section: 'split', column: 2, desc: 'Validación cruzada en 5 pliegues.' },
+      { id: 'b_sp_1', name: 'Curse of Dimensionality', section: 'split', column: 3, desc: 'Demasiadas dimensiones dispersan el espacio.' },
+      { id: 'b_sp_2', name: 'Data Leakage (Fuga de Datos)', section: 'split', column: 3, desc: 'Información de prueba se filtra al entrenamiento.' },
+      { id: 'r_sp_1', name: 'Reducción PCA Estratificada', section: 'split', column: 4, desc: 'Refuerzo de calidad: Condensa dimensiones y varianza.' },
+      { id: 'r_sp_2', name: 'K-Fold Blindado en Pipeline', section: 'split', column: 4, desc: 'Refuerzo de calidad: Aísla el test de los transformers.' },
+
+      // 4. ESCALAMIENTO
+      { id: 'c_sc_1', name: 'StandardScaler', section: 'scaling', column: 2, desc: 'Estandariza a media 0 y varianza unitaria.' },
+      { id: 'c_sc_2', name: 'MinMaxScaler', section: 'scaling', column: 2, desc: 'Comprime valores en rango normalizado [0, 1].' },
+      { id: 'b_sc_1', name: 'Desbalance de Escala', section: 'scaling', column: 3, desc: 'Atributos con órdenes de magnitud dispares.' },
+      { id: 'r_sc_1', name: 'RobustScaler por Cuantiles', section: 'scaling', column: 4, desc: 'Refuerzo de calidad: Normalización inmune a outliers.' },
+
+      // 5. SELECCIÓN DE MODELO ML
+      { id: 'c_md_rf', name: 'Random Forest', modelType: 'rf', section: 'model', column: 2, taskBadge: 'Clasif. / Regresión', compatibleTaskCategories: ['classification', 'regression'], desc: 'Ensamble bagging con árboles paralelos.' },
+      { id: 'c_md_lr', name: 'Regresión Logística', modelType: 'logistic', section: 'model', column: 2, taskBadge: 'Clasificación', compatibleTaskCategories: ['classification'], desc: 'Clasificador lineal probabilístico para etiquetas discretas.' },
+      { id: 'c_md_svm', name: 'SVM - Kernel RBF', modelType: 'svm', section: 'model', column: 2, taskBadge: 'Clasif. / Regresión', compatibleTaskCategories: ['classification', 'regression'], desc: 'Margen máximo para patrones lineales y no lineales.' },
+      { id: 'c_md_mlp', name: 'Red Neuronal MLP', modelType: 'mlp', section: 'model', column: 2, taskBadge: 'Universal', compatibleTaskCategories: ['classification', 'regression'], desc: 'Perceptrón multicapa para patrones no lineales densos.' },
+      { id: 'c_md_lin', name: 'Regresión Lineal / Ridge', modelType: 'linear', section: 'model', column: 2, taskBadge: 'Regresión', compatibleTaskCategories: ['regression'], desc: 'Ajuste de hiperplano continuo con regularización Ridge.' },
+      { id: 'c_md_km', name: 'K-Means Clustering', modelType: 'kmeans', section: 'model', column: 2, taskBadge: 'Clustering', compatibleTaskCategories: ['clustering'], desc: 'Particiona en K agrupaciones por centroides euclidianos.' },
+
+      { id: 'b_md_1', name: 'Underfitting (Subajuste)', section: 'model', column: 3, desc: 'Incapaz de aprender la estructura básica.' },
+      { id: 'b_md_2', name: 'Overfitting por Complejidad', section: 'model', column: 3, desc: 'Memoriza el ruido en lugar del patrón real.' },
+      { id: 'r_md_1', name: 'Poda y Regularización Dropout', section: 'model', column: 4, desc: 'Refuerzo de calidad: Previene sobreajuste excesivo.' },
+      { id: 'r_md_2', name: 'Ensamble Stacking Calibrado', section: 'model', column: 4, desc: 'Refuerzo de calidad: Multiplica la precisión del modelo.' },
+
+      // 6. HIPERPARÁMETROS
+      { id: 'c_hp_rf_depth', name: 'max_depth & min_samples', modelTarget: 'rf', modelBadge: 'Random Forest', section: 'hyperparams', column: 2, desc: 'Controla el tamaño y partición de los árboles de decisión.' },
+      { id: 'c_hp_rf_trees', name: 'n_estimators (Árboles)', modelTarget: 'rf', modelBadge: 'Random Forest', section: 'hyperparams', column: 2, desc: 'Cantidad de estimadores en ensamble para reducir varianza.' },
+      { id: 'c_hp_svm_gamma', name: 'gamma & C (Margen RBF)', modelTarget: 'svm', modelBadge: 'SVM', section: 'hyperparams', column: 2, desc: 'Ajusta el radio de influencia RBF y penalización de holgura C.' },
+      { id: 'c_hp_svm_kernel', name: 'kernel (RBF / Poly)', modelTarget: 'svm', modelBadge: 'SVM', section: 'hyperparams', column: 2, desc: 'Función de mapeo dimensional para clasificar márgenes.' },
+      { id: 'c_hp_log_c', name: 'C & penalty (L1 / L2)', modelTarget: 'logistic', modelBadge: 'Regresión Logística', section: 'hyperparams', column: 2, desc: 'Inversa de regularización para calibrar log-odds.' },
+      { id: 'c_hp_mlp_lr', name: 'hidden_layers & lr_init', modelTarget: 'mlp', modelBadge: 'Red Neuronal MLP', section: 'hyperparams', column: 2, desc: 'Capas ocultas y tasa de aprendizaje inicial en retropropagación.' },
+      { id: 'c_hp_lin_alpha', name: 'alpha & solver (Ridge)', modelTarget: 'linear', modelBadge: 'Regresión Lineal / Ridge', section: 'hyperparams', column: 2, desc: 'Intensidad de penalización L2 sobre coeficientes continuos.' },
+      { id: 'c_hp_km_k', name: 'n_clusters (K) & init', modelTarget: 'kmeans', modelBadge: 'K-Means', section: 'hyperparams', column: 2, desc: 'Número de centroides iniciales mediante K-Means++.' },
+
+      { id: 'b_hp_1', name: 'Overfitting de Parámetros', section: 'hyperparams', column: 3, desc: 'Parámetros sin restricción que memorizan.' },
+      { id: 'r_hp_1', name: 'Regularización L1 / L2 Lasso-Ridge', section: 'hyperparams', column: 4, desc: 'Refuerzo de calidad: Penaliza pesos desmedidos.' },
+
+      // 7. FUNCIÓN DE PÉRDIDA
+      { id: 'c_ls_bce', name: 'Binary Cross-Entropy', taskCategory: 'classification', taskBadge: 'Clasif. Binaria', compatibleTasks: ['clf_binary'], section: 'loss', column: 2, desc: 'Coste logarítmico probabilístico para 2 clases (Log-Loss).' },
+      { id: 'c_ls_cce', name: 'Categorical Cross-Entropy', taskCategory: 'classification', taskBadge: 'Clasif. Multiclase', compatibleTasks: ['clf_multi'], section: 'loss', column: 2, desc: 'Pérdida softmax multiclase para categorías mutuamente excluyentes.' },
+      { id: 'c_ls_mse', name: 'Mean Squared Error (MSE)', taskCategory: 'regression', taskBadge: 'Regresión', compatibleTasks: ['reg_linear', 'reg_poly'], section: 'loss', column: 2, desc: 'Penalización cuadrática continua sensible a residuos.' },
+      { id: 'c_ls_hub', name: 'Huber Loss Suavizada', taskCategory: 'regression', taskBadge: 'Regresión', compatibleTasks: ['reg_linear', 'reg_poly'], section: 'loss', column: 2, desc: 'Combina lo mejor de MSE y MAE, inmune a outliers.' },
+      { id: 'c_ls_ine', name: 'Inertia / WCSS', taskCategory: 'clustering', taskBadge: 'Clustering', compatibleTasks: ['clustering'], section: 'loss', column: 2, desc: 'Suma de distancias cuadradas intra-cluster.' },
+
+      { id: 'b_ls_1', name: 'Outlier Extremo (Rompe MSE)', section: 'loss', column: 3, desc: 'Gradientes desproporcionados rompen el coste.' },
+      { id: 'r_ls_1', name: 'Huber Loss Suavizada', section: 'loss', column: 4, desc: 'Refuerzo de calidad: Pérdida robusta ante valores atípicos.' },
+
+      // 8. OPTIMIZADOR
+      { id: 'c_op_1', name: 'Adam Optimizer', section: 'optimizer', column: 2, taskBadge: 'Universal', desc: 'Tasa adaptativa con momentos de segundo orden.' },
+      { id: 'c_op_2', name: 'SGD con Momentum', section: 'optimizer', column: 2, taskBadge: 'Universal', desc: 'Descenso de gradiente estocástico guiado.' },
+      { id: 'b_op_1', name: 'Estancamiento en Mínimo Local', section: 'optimizer', column: 3, desc: 'Gradientes nulos frenan la convergencia.' },
+      { id: 'r_op_1', name: 'Learning Rate Warmup & Decay', section: 'optimizer', column: 4, desc: 'Refuerzo de calidad: Escapa de valles de estancamiento.' },
+
+      // 9. MÉTRICA
+      { id: 'c_mt_acc', name: 'Accuracy (Exactitud)', taskCategory: 'classification', taskBadge: 'Clasificación', compatibleTasks: ['clf_binary', 'clf_multi'], section: 'metrics', column: 2, desc: 'Tasa simple de aciertos clasificados. Solo válida en clasificación balanceada.' },
+      { id: 'c_mt_f1', name: 'F1-Score / ROC-AUC', taskCategory: 'classification', taskBadge: 'Clasificación', compatibleTasks: ['clf_binary', 'clf_multi'], section: 'metrics', column: 2, desc: 'Media armónica de Precision y Recall. Inmune al desbalance.' },
+      { id: 'c_mt_r2', name: 'R² Score (Bondad de Ajuste)', taskCategory: 'regression', taskBadge: 'Regresión', compatibleTasks: ['reg_linear', 'reg_poly'], section: 'metrics', column: 2, desc: 'Coeficiente de determinación continuo [0 a 1]. Exclusivo de regresión.' },
+      { id: 'c_mt_rmse', name: 'RMSE / MAE Error', taskCategory: 'regression', taskBadge: 'Regresión', compatibleTasks: ['reg_linear', 'reg_poly'], section: 'metrics', column: 2, desc: 'Raíz del error cuadrático medio en las mismas unidades del objetivo.' },
+      { id: 'c_mt_sil', name: 'Silhouette Score', taskCategory: 'clustering', taskBadge: 'Clustering', compatibleTasks: ['clustering'], section: 'metrics', column: 2, desc: 'Cohesión y separación entre clústeres no supervisados.' },
+
+      { id: 'b_mt_1', name: 'Accuracy Trap / Desbalance', section: 'metrics', column: 3, desc: 'Métrica engañosa destruida por desbalance.' },
+      { id: 'r_mt_1', name: 'Alta Accuracy / Precisión', section: 'metrics', column: 4, desc: 'Refuerzo de calidad: Métrica afinada de alta confiabilidad.' },
+      { id: 'r_mt_2', name: 'Validación SMOTE Balanceada', section: 'metrics', column: 4, desc: 'Refuerzo de calidad: Blindaje analítico integral.' }
+    ];
+
+    let activePlayer = 1;
+    let actionsRemaining = 2;
+    let selectedCardUid = null;
+    let drawDeck = [];
+    const MAX_HAND_SIZE = 10;
+
+    let players = {};
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function createPlayerState(name, id) {
+      const randomTask = TASK_TYPES[Math.floor(Math.random() * TASK_TYPES.length)];
+      const slots = {};
+      PIPELINE_SECTIONS.forEach(sec => {
+        slots[sec.id] = {
+          component: null,
+          bug: null,
+          reinforcements: []
+        };
+      });
+
+      return {
+        id: id,
+        name: name,
+        task: randomTask,
+        taskFlipped: false,
+        slots: slots,
+        hand: []
+      };
+    }
+
+    function logTerminal(msg) {
+      const el = document.getElementById('terminal-last-message');
+      if (el) {
+        el.textContent = msg;
+      }
+    }
+
+    function showToast(title, message, icon = 'fa-solid fa-circle-info', isError = false) {
+      const toast = document.getElementById('toast');
+      const box = document.getElementById('toast-box');
+      const tTitle = document.getElementById('toast-title');
+      const tMsg = document.getElementById('toast-message');
+      const tIcon = document.getElementById('toast-icon');
+
+      if (!toast || !box) return;
+
+      tTitle.textContent = title;
+      tMsg.textContent = message;
+      tIcon.innerHTML = `<i class="${icon}"></i>`;
+
+      if (isError) {
+        box.className = "bg-slate-900 border border-rose-500 shadow-2xl rounded-xl p-3 flex items-center gap-3";
+        tIcon.className = "text-rose-400 text-lg";
+      } else {
+        box.className = "bg-slate-900 border border-cyan-500 shadow-2xl rounded-xl p-3 flex items-center gap-3";
+        tIcon.className = "text-cyan-400 text-lg";
+      }
+
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 3500);
+    }
+
+    function initializeGame() {
+      // Build master deck with unique UIDs
+      drawDeck = [];
+      MASTER_CARDS.forEach(card => {
+        drawDeck.push({
+          ...card,
+          uid: card.id + '_' + Math.random().toString(36).substring(2, 8)
+        });
+      });
+      shuffle(drawDeck);
+
+      // Create players
+      players = {
+        1: createPlayerState('Jugador 1', 1),
+        2: createPlayerState('Jugador 2', 2)
+      };
+
+      activePlayer = 1;
+      actionsRemaining = 2;
+      selectedCardUid = null;
+
+      // Deal initial hand of 4 cards to each player
+      for (let i = 0; i < 4; i++) {
+        drawCard(1, true);
+        drawCard(2, true);
+      }
+
+      // Initial renders
+      renderPipelineSlots(1);
+      renderPipelineSlots(2);
+      renderHand(1);
+      renderHand(2);
+      populateCompendiumTable();
+      updateTurnHeader();
+      logTerminal("Partida lista. Haz clic en 'Voltear' en tu carta de Tarea para conocer tu objetivo de ML.");
+    }
+
+    function drawCard(playerNum, silent = false) {
+      if (players[playerNum].hand.length >= MAX_HAND_SIZE) {
+        if (!silent) {
+          showToast('Mano llena', `Has alcanzado el límite máximo de ${MAX_HAND_SIZE} cartas en mano.`, 'fa-solid fa-layer-group', true);
+        }
+        return null;
+      }
+
+      if (drawDeck.length === 0) {
+        logTerminal("Mazo agotado. Barajando cartas maestras...");
+        MASTER_CARDS.forEach(c => drawDeck.push({ ...c, uid: c.id + '_' + Math.random().toString(36).substring(2, 6) }));
+        shuffle(drawDeck);
+      }
+      const card = drawDeck.pop();
+      players[playerNum].hand.push(card);
+      if (!silent) playSound('draw');
+      return card;
+    }
+
+    function setupTaskCards() {
+      const p1Wrap = document.getElementById('p1-task-card-wrap');
+      if (p1Wrap) {
+        p1Wrap.onclick = () => {
+          if (activePlayer !== 1) {
+            showToast('Turno del Jugador 2', 'Es el turno del Jugador 2. Pasa turno para jugar con el J1.', 'fa-solid fa-lock', true);
+            return;
+          }
+          if (!players[1].taskFlipped) {
+            players[1].taskFlipped = true;
+            p1Wrap.classList.add('flipped');
+            playSound('flip');
+            renderTaskCardContent(1);
+            logTerminal(`Jugador 1 reveló su tarea asignada: [${players[1].task.name}].`);
+            updatePlayerCounters(1);
+          }
+        };
+      }
+
+      const p2Wrap = document.getElementById('p2-task-card-wrap');
+      if (p2Wrap) {
+        p2Wrap.onclick = () => {
+          if (activePlayer !== 2) {
+            showToast('Turno del Jugador 1', 'Es el turno del Jugador 1. Pasa turno para jugar con el J2.', 'fa-solid fa-lock', true);
+            return;
+          }
+          if (!players[2].taskFlipped) {
+            players[2].taskFlipped = true;
+            p2Wrap.classList.add('flipped');
+            playSound('flip');
+            renderTaskCardContent(2);
+            logTerminal(`Jugador 2 reveló su tarea asignada: [${players[2].task.name}].`);
+            updatePlayerCounters(2);
+          }
+        };
+      }
+    }
+
+    function renderTaskCardContent(playerNum) {
+      const p = players[playerNum];
+      const targetEl = document.getElementById(`p${playerNum}-task-content`);
+      if (!targetEl) return;
+      const task = p.task;
+
+      targetEl.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-slate-950/80 border border-cyan-400/50 flex items-center justify-center text-cyan-300 text-xl shadow-inner">
+            <i class="fa-solid ${task.icon}"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-950 text-cyan-300 border border-cyan-700 font-mono-code">
+                ${task.badge}
+              </span>
+              <span class="text-[10px] text-emerald-400 font-semibold"><i class="fa-solid fa-circle-check"></i> Revelada</span>
+            </div>
+            <h4 class="text-xs sm:text-sm font-extrabold text-white mt-0.5">${task.name}</h4>
+            <p class="text-[10px] text-slate-300 line-clamp-1">${task.desc}</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] text-slate-400 uppercase tracking-wider block font-mono-code">Objetivo</span>
+          <span class="text-[11px] font-bold text-cyan-300 font-mono-code">9/9 Pasos</span>
+        </div>
+      `;
+    }
+
+    function renderPipelineSlots(playerNum) {
+      const container = document.getElementById(`p${playerNum}-slots-grid`);
+      if (!container) return;
+      container.innerHTML = '';
+      const p = players[playerNum];
+
+      let selectedCard = null;
+      if (selectedCardUid && players[activePlayer]) {
+        selectedCard = players[activePlayer].hand.find(c => c.uid === selectedCardUid);
+      }
+
+      PIPELINE_SECTIONS.forEach((sec) => {
+        const slot = p.slots[sec.id];
+        const hasComp = slot.component !== null;
+        const hasBug = slot.bug !== null;
+        const reinforcementsCount = slot.reinforcements.length;
+        const isShielded = reinforcementsCount >= 2;
+
+        const cell = document.createElement('div');
+        const isMatchingTarget = selectedCard && (selectedCard.section === sec.id);
+
+        let borderClass = 'border-slate-800 bg-slate-950/70 text-slate-400';
+        let badgeHtml = `<span class="text-[9px] px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 font-mono-code">Vacío (Col 2 req.)</span>`;
+
+        if (hasComp && !hasBug && !isShielded) {
+          borderClass = 'border-blue-600/80 bg-blue-950/30 text-blue-100 shadow-md';
+          if (reinforcementsCount === 1) {
+            badgeHtml = `<span class="text-[9px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-600 font-mono-code"><i class="fa-solid fa-shield-halved mr-1"></i>Reforzado (1/2)</span>`;
+          } else {
+            badgeHtml = `<span class="text-[9px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-700 font-mono-code"><i class="fa-solid fa-check mr-1"></i>Instalado</span>`;
+          }
+        } else if (hasBug) {
+          borderClass = 'bug-pulse bg-rose-950/40 text-rose-200';
+          badgeHtml = `<span class="text-[9px] px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-600 font-mono-code animate-pulse"><i class="fa-solid fa-bug mr-1"></i>¡Bug!</span>`;
+        } else if (isShielded) {
+          borderClass = 'border-emerald-500 bg-emerald-950/30 text-emerald-200 shield-shine';
+          badgeHtml = `<span class="text-[9px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500 font-mono-code"><i class="fa-solid fa-shield mr-1"></i>Blindado (2/2)</span>`;
+        }
+
+        if (isMatchingTarget) {
+          borderClass += ' slot-target-glow';
+        }
+
+        cell.className = `relative rounded-xl border p-2.5 flex flex-col justify-between min-h-[115px] sm:min-h-[125px] cursor-pointer transition-all duration-200 hover:border-cyan-400 hover:shadow-lg ${borderClass}`;
+        cell.dataset.sectionId = sec.id;
+        cell.dataset.playerId = playerNum;
+
+        let innerHtml = `
+          <div class="flex items-center justify-between pb-1.5 border-b border-slate-800/80 gap-1">
+            <span class="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+              <span class="w-4 h-4 rounded bg-slate-800 flex items-center justify-center text-[10px] text-cyan-400 font-mono-code font-bold">${sec.order}</span>
+              <span class="truncate max-w-[110px] sm:max-w-[125px]">${sec.name}</span>
+            </span>
+            ${badgeHtml}
+          </div>
+        `;
+
+        if (!hasComp) {
+          innerHtml += `
+            <div class="my-auto py-2 text-center text-slate-500">
+              <i class="fa-solid ${sec.icon} text-xl opacity-35 block mb-1"></i>
+              <p class="text-[10px] font-mono-code text-slate-500">Espacio sin carta</p>
+            </div>
+          `;
+        } else {
+          let taskTagHtml = '';
+          if (slot.component.taskLabel) {
+            taskTagHtml = `<span class="text-[8px] font-mono-code px-1.5 py-0.5 rounded bg-indigo-950/90 text-indigo-300 border border-indigo-700/80 inline-block truncate max-w-full my-0.5"><i class="fa-solid fa-bullseye text-[7px] mr-1"></i>${slot.component.taskLabel}</span>`;
+          }
+
+          innerHtml += `
+            <div class="my-auto py-1 space-y-1">
+              <div class="flex items-center gap-1.5 text-[11px] font-bold text-white truncate">
+                <i class="fa-solid fa-cube text-blue-400 text-xs"></i>
+                <span class="truncate">${slot.component.name}</span>
+              </div>
+              <p class="text-[9px] text-slate-400 line-clamp-1">${slot.component.desc || ''}</p>
+              ${taskTagHtml}
+          `;
+
+          if (hasBug) {
+            innerHtml += `
+              <div class="flex items-center gap-1.5 text-[9px] font-semibold text-rose-300 bg-rose-950/80 px-2 py-0.5 rounded border border-rose-700 truncate mt-1">
+                <i class="fa-solid fa-virus text-rose-400"></i>
+                <span class="truncate">${slot.bug.name}</span>
+              </div>
+            `;
+          }
+
+          if (reinforcementsCount > 0) {
+            innerHtml += `
+              <div class="flex items-center gap-1 flex-wrap pt-0.5">
+                ${slot.reinforcements.map((r, i) => `
+                  <span class="text-[8px] font-mono-code px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 flex items-center gap-0.5">
+                    <i class="fa-solid fa-shield text-emerald-400 text-[8px]"></i> R${i + 1}
+                  </span>
+                `).join('')}
+              </div>
+            `;
+          }
+
+          innerHtml += `</div>`;
+        }
+
+        innerHtml += `
+          <div class="pt-1.5 border-t border-slate-800/60 text-[9px] text-slate-500 font-mono-code flex items-center justify-between">
+            <span>Toca para interactuar</span>
+            <i class="fa-solid fa-arrow-pointer text-[9px] text-slate-500"></i>
+          </div>
+        `;
+
+        cell.innerHTML = innerHtml;
+
+        cell.onclick = (e) => {
+          e.stopPropagation();
+          handleSlotInteraction(sec.id, playerNum);
+        };
+
+        container.appendChild(cell);
+      });
+
+      updatePlayerCounters(playerNum);
+    }
+
+    function renderHand(playerNum) {
+      const container = document.getElementById(`p${playerNum}-hand-strip`);
+      if (!container) return;
+      container.innerHTML = '';
+      const p = players[playerNum];
+      const countEl = document.getElementById(`p${playerNum}-hand-count`);
+      if (countEl) countEl.textContent = p.hand.length;
+
+      if (p.hand.length === 0) {
+        container.innerHTML = `
+          <div class="w-full py-6 text-center text-slate-600 text-xs font-mono-code">
+            <i class="fa-solid fa-hand-sparkles text-base mb-1 block opacity-50"></i>
+            Sin cartas en mano. Roba del mazo usando el botón superior.
+          </div>
+        `;
+        return;
+      }
+
+      p.hand.forEach(card => {
+        const cardEl = document.createElement('div');
+        const isSelected = selectedCardUid === card.uid;
+
+        let colBadge = '';
+        let cardBg = '';
+
+        if (card.column === 2) {
+          colBadge = `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-blue-950 text-blue-300 border border-blue-800">Col 2: Componente</span>`;
+          cardBg = 'bg-gradient-to-b from-blue-950/40 to-slate-900 border-blue-800/70 hover:border-blue-500';
+        } else if (card.column === 3) {
+          colBadge = `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-rose-950 text-rose-300 border border-rose-800">Col 3: Bug</span>`;
+          cardBg = 'bg-gradient-to-b from-rose-950/40 to-slate-900 border-rose-800/70 hover:border-rose-500';
+        } else if (card.column === 4) {
+          colBadge = `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">Col 4: Refuerzo</span>`;
+          cardBg = 'bg-gradient-to-b from-emerald-950/40 to-slate-900 border-emerald-800/70 hover:border-emerald-500';
+        }
+
+        const ring = isSelected ? 'ring-2 ring-cyan-400 -translate-y-1 shadow-lg shadow-cyan-500/30' : '';
+
+        cardEl.className = `w-44 flex-shrink-0 rounded-xl border p-2.5 flex flex-col justify-between cursor-pointer text-left shadow-md ${cardBg} ${ring} transition-all duration-200 select-none`;
+        cardEl.dataset.cardUid = card.uid;
+
+        const secObj = PIPELINE_SECTIONS.find(s => s.id === card.section);
+        const sectionName = secObj ? secObj.name : card.section;
+
+        let bindingBadge = '';
+        if (card.modelBadge) {
+          bindingBadge = `
+            <span class="inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded bg-amber-950/90 text-amber-300 border border-amber-600/70 truncate max-w-full my-0.5">
+              <i class="fa-solid fa-microchip text-[7px]"></i> ${card.modelBadge}
+            </span>
+          `;
+        } else if (card.taskBadge) {
+          bindingBadge = `
+            <span class="inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded bg-purple-950/90 text-purple-300 border border-purple-600/70 truncate max-w-full my-0.5">
+              <i class="fa-solid fa-tag text-[7px]"></i> ${card.taskBadge}
+            </span>
+          `;
+        }
+
+        cardEl.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between gap-1 mb-1">
+              ${colBadge}
+              <div class="flex items-center gap-1.5">
+                <button class="btn-discard-card p-1 rounded hover:bg-rose-950/80 text-slate-400 hover:text-rose-400 transition" title="Descartar carta de la mano (Cuesta 1 Acción)">
+                  <i class="fa-solid fa-trash-can text-[10px]"></i>
+                </button>
+                <span class="text-[9px] font-mono-code font-bold text-slate-400">#${card.column}</span>
+              </div>
+            </div>
+            <h4 class="text-xs font-bold text-white mt-0.5 leading-snug truncate">${card.name}</h4>
+            <span class="text-[9px] text-cyan-300 font-medium block truncate"><i class="fa-solid fa-layer-group text-[8px]"></i> ${sectionName}</span>
+            ${bindingBadge}
+            <p class="text-[10px] text-slate-400 mt-1 leading-tight line-clamp-2">${card.desc}</p>
+          </div>
+          <div class="pt-1.5 mt-1 border-t border-slate-800/80 flex items-center justify-between text-[9px] font-mono-code text-slate-400">
+            <span>${isSelected ? '✓ Seleccionada' : 'Toca para usar'}</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
+          </div>
+        `;
+
+        const discardBtn = cardEl.querySelector('.btn-discard-card');
+        if (discardBtn) {
+          discardBtn.onclick = (e) => {
+            e.stopPropagation();
+            discardCard(playerNum, card.uid);
+          };
+        }
+
+        cardEl.onclick = (e) => {
+          e.stopPropagation();
+          if (activePlayer !== playerNum) {
+            showToast('Turno Contrario', `Es el turno de ${players[activePlayer].name}. Solo el jugador activo puede jugar cartas.`, 'fa-solid fa-ban', true);
+            return;
+          }
+          selectCard(card.uid);
+        };
+
+        container.appendChild(cardEl);
+      });
+    }
+
+    function discardCard(playerNum, uid) {
+      if (activePlayer !== playerNum) {
+        showToast('Turno Contrario', `Es el turno de ${players[activePlayer].name}. Solo el jugador activo puede descartar cartas.`, 'fa-solid fa-ban', true);
+        return;
+      }
+      if (actionsRemaining <= 0) {
+        showToast('Sin acciones', 'No te quedan acciones para descartar cartas este turno. Pulsa "Pasar Turno".', 'fa-solid fa-triangle-exclamation', true);
+        return;
+      }
+
+      const p = players[playerNum];
+      const cardIdx = p.hand.findIndex(c => c.uid === uid);
+      if (cardIdx === -1) return;
+      const card = p.hand[cardIdx];
+
+      p.hand.splice(cardIdx, 1);
+      if (selectedCardUid === uid) {
+        selectedCardUid = null;
+      }
+
+      actionsRemaining--;
+      playSound('draw');
+      logTerminal(`🗑️ ${p.name} descartó [${card.name}] de su mano (1 Acción consumida).`);
+      showToast('Carta Descartada', `Has descartado [${card.name}] (-1 Acción).`, 'fa-solid fa-trash-can');
+      refreshGameViews();
+    }
+
+    function selectCard(uid) {
+      if (selectedCardUid === uid) {
+        selectedCardUid = null;
+      } else {
+        selectedCardUid = uid;
+        playSound('play');
+      }
+      renderPipelineSlots(1);
+      renderPipelineSlots(2);
+      renderHand(1);
+      renderHand(2);
+    }
+
+    function handleSlotInteraction(sectionId, targetPlayerNum) {
+      if (actionsRemaining <= 0) {
+        showToast('Sin acciones', 'No te quedan acciones este turno. Pulsa "Pasar Turno" para recargar 2 acciones.', 'fa-solid fa-triangle-exclamation', true);
+        return;
+      }
+
+      const activeP = players[activePlayer];
+      const targetP = players[targetPlayerNum];
+      const targetSlot = targetP.slots[sectionId];
+      const secObj = PIPELINE_SECTIONS.find(s => s.id === sectionId);
+
+      if (!selectedCardUid) {
+        if (!targetSlot.component) {
+          showToast(`Casillero: ${secObj.name}`, 'Selecciona primero una carta de Componente (Col 2) de tu mano para instalar aquí.');
+        } else if (targetSlot.bug) {
+          showToast(`¡Bug Activo en ${secObj.name}!`, `Afectado por "${targetSlot.bug.name}". Juega un Refuerzo (Col 4) para curarlo.`, 'fa-solid fa-bug', true);
+        } else if (targetSlot.reinforcements.length >= 2) {
+          showToast(`Casillero Blindado: ${secObj.name}`, `Componente: "${targetSlot.component.name}". Tiene 2 Refuerzos y es inmune a ataques.`);
+        } else {
+          showToast(`Casillero: ${secObj.name}`, `Componente activo: "${targetSlot.component.name}" con ${targetSlot.reinforcements.length} Refuerzo(s).`);
+        }
+        return;
+      }
+
+      const cardIdx = activeP.hand.findIndex(c => c.uid === selectedCardUid);
+      if (cardIdx === -1) return;
+      const card = activeP.hand[cardIdx];
+
+      if (card.section !== sectionId) {
+        const reqSec = PIPELINE_SECTIONS.find(s => s.id === card.section);
+        showToast('Sección Incompatible', `Esta carta pertenece a "${reqSec ? reqSec.name : card.section}". No corresponde a este casillero.`, 'fa-solid fa-ban', true);
+        return;
+      }
+
+      if (card.column === 2 && !activeP.taskFlipped) {
+        showToast('Voltea tu Tarea primero', 'Debes voltear tu carta superior de Tarea para conocer tu objetivo de Machine Learning.', 'fa-solid fa-eye', true);
+        return;
+      }
+
+      // COLUMNA 2: COMPONENTE BASE
+      if (card.column === 2) {
+        if (targetPlayerNum !== activePlayer) {
+          showToast('Objetivo Inválido', 'Solo puedes instalar Componentes (Col 2) en tu propio tablero.', 'fa-solid fa-ban', true);
+          return;
+        }
+        if (targetSlot.component !== null) {
+          showToast('Casillero Ocupado', 'Ya tienes un componente instalado en este casillero.', 'fa-solid fa-triangle-exclamation', true);
+          return;
+        }
+
+        // VALIDACIÓN 1: BASE DE DATOS
+        if (card.section === 'database') {
+          if (card.compatibleTasks && !card.compatibleTasks.includes(activeP.task.id)) {
+            showToast('Dataset Incompatible', `[${card.name}] es para "${card.taskLabel}". Tu tarea asignada es "${activeP.task.name}".`, 'fa-solid fa-triangle-exclamation', true);
+            return;
+          }
+        }
+
+        // VALIDACIÓN 2: MODELO ML
+        if (card.section === 'model') {
+          if (card.compatibleTaskCategories && !card.compatibleTaskCategories.includes(activeP.task.category)) {
+            showToast('Modelo Incompatible', `[${card.name}] es para ${card.taskBadge}. No resuelve tareas de ${activeP.task.name}.`, 'fa-solid fa-brain', true);
+            return;
+          }
+        }
+
+        // VALIDACIÓN 3: HIPERPARÁMETROS
+        if (card.section === 'hyperparams') {
+          const installedModel = activeP.slots['model'].component;
+          if (!installedModel) {
+            showToast('Requiere Modelo previo', 'Instala primero un Modelo ML (Casillero 5) para saber qué hiperparámetro corresponde.', 'fa-solid fa-sliders', true);
+            return;
+          }
+          if (card.modelTarget && card.modelTarget !== installedModel.modelType) {
+            showToast('Hiperparámetro Incompatible', `[${card.name}] solo aplica a [${card.modelBadge}]. Tienes instalado [${installedModel.name}].`, 'fa-solid fa-triangle-exclamation', true);
+            return;
+          }
+        }
+
+        // VALIDACIÓN 4: FUNCIÓN DE PÉRDIDA
+        if (card.section === 'loss') {
+          if (card.compatibleTasks && !card.compatibleTasks.includes(activeP.task.id)) {
+            if (activeP.task.category === 'regression' && card.taskCategory === 'classification') {
+              showToast('Pérdida Incompatible', `[${card.name}] es para clasificación. Las regresiones utilizan pérdidas continuas como MSE o Huber.`, 'fa-solid fa-chart-area', true);
+              return;
+            }
+            if (activeP.task.category === 'classification' && card.taskCategory === 'regression') {
+              showToast('Pérdida Incompatible', `[${card.name}] es para regresión continua. No aplica a clasificación (requiere Cross-Entropy).`, 'fa-solid fa-chart-area', true);
+              return;
+            }
+            showToast('Pérdida Incompatible', `[${card.name}] no es adecuada para ${activeP.task.name}.`, 'fa-solid fa-ban', true);
+            return;
+          }
+        }
+
+        // VALIDACIÓN 5: MÉTRICA
+        if (card.section === 'metrics') {
+          if (card.compatibleTasks && !card.compatibleTasks.includes(activeP.task.id)) {
+            if (activeP.task.category === 'regression' && card.taskCategory === 'classification') {
+              showToast('Métrica Incompatible', `[${card.name}] solo mide clasificaciones. Para ${activeP.task.name} debes usar R² Score o RMSE.`, 'fa-solid fa-award', true);
+              return;
+            }
+            if (activeP.task.category === 'classification' && card.taskCategory === 'regression') {
+              showToast('Métrica Incompatible', `[${card.name}] evalúa errores continuos de regresión. Para ${activeP.task.name} utiliza Accuracy o F1-Score.`, 'fa-solid fa-award', true);
+              return;
+            }
+            showToast('Métrica Incompatible', `[${card.name}] no corresponde al objetivo de ${activeP.task.name}.`, 'fa-solid fa-ban', true);
+            return;
+          }
+        }
+
+        targetSlot.component = card;
+        activeP.hand.splice(cardIdx, 1);
+        actionsRemaining--;
+        selectedCardUid = null;
+        playSound('play');
+        logTerminal(`${activeP.name} instaló el componente [${card.name}] en ${secObj.name}.`);
+        showToast('Componente Instalado', `[${card.name}] listo en ${secObj.name}.`, 'fa-solid fa-cube');
+        refreshGameViews();
+        return;
+      }
+
+      // COLUMNA 3: BUG / SABOTAJE
+      if (card.column === 3) {
+        if (!targetSlot.component) {
+          showToast('Requiere Componente', 'No puedes colocar un Bug en un casillero vacío. Primero debe haber un componente (Col 2).', 'fa-solid fa-ban', true);
+          return;
+        }
+
+        if (targetSlot.reinforcements.length >= 2) {
+          showToast('¡Casillero Blindado!', `El casillero tiene 2 Refuerzos y es inmune a [${card.name}]. El ataque es bloqueado.`, 'fa-solid fa-shield', true);
+          return;
+        }
+
+        if (targetSlot.reinforcements.length === 1) {
+          const absorbedRefuerzo = targetSlot.reinforcements.pop();
+          activeP.hand.splice(cardIdx, 1);
+          actionsRemaining--;
+          selectedCardUid = null;
+          playSound('reinforce');
+          logTerminal(`🛡️ ¡Ataque Neutralizado! [${card.name}] intentó dañar ${secObj.name}, pero el Refuerzo [${absorbedRefuerzo.name}] lo absorbió.`);
+          showToast('Ataque Absorbido', `El Refuerzo absorbió el Bug y se consumió. Tu componente sigue a salvo.`, 'fa-solid fa-shield-halved');
+          refreshGameViews();
+          return;
+        }
+
+        if (targetSlot.bug !== null) {
+          showToast('Bug ya presente', 'Este casillero ya tiene un sabotaje activo sin resolver.', 'fa-solid fa-triangle-exclamation', true);
+          return;
+        }
+
+        targetSlot.bug = card;
+        activeP.hand.splice(cardIdx, 1);
+        actionsRemaining--;
+        selectedCardUid = null;
+        playSound('bug');
+        logTerminal(`⚠️ ¡SABOTAJE! ${activeP.name} lanzó [${card.name}] sobre ${secObj.name} de ${targetP.name}.`);
+        showToast('¡Sabotaje Exitoso!', `[${card.name}] infectó el casillero de ${targetP.name}.`, 'fa-solid fa-skull-crossbones', true);
+        refreshGameViews();
+        return;
+      }
+
+      // COLUMNA 4: REFUERZO / CALIDAD
+      if (card.column === 4) {
+        if (targetPlayerNum !== activePlayer) {
+          showToast('Objetivo Inválido', 'Las cartas de Refuerzo / Calidad (Col 4) se juegan en tu propio pipeline.', 'fa-solid fa-ban', true);
+          return;
+        }
+
+        if (!targetSlot.component) {
+          showToast('Requiere Componente', 'Debes tener un componente base (Col 2) instalado para poder equipar un Refuerzo.', 'fa-solid fa-ban', true);
+          return;
+        }
+
+        // Cura bug si existe
+        if (targetSlot.bug !== null) {
+          const cleanedBug = targetSlot.bug.name;
+          targetSlot.bug = null;
+          activeP.hand.splice(cardIdx, 1);
+          actionsRemaining--;
+          selectedCardUid = null;
+          playSound('reinforce');
+          logTerminal(`🛡️ ¡Bug Curado! ${activeP.name} utilizó el Refuerzo [${card.name}] para neutralizar [${cleanedBug}] en ${secObj.name}.`);
+          showToast('Bug Eliminado', `Has depurado [${cleanedBug}] exitosamente.`, 'fa-solid fa-shield-virus');
+          refreshGameViews();
+          return;
+        }
+
+        // Potencia o blinda
+        if (targetSlot.reinforcements.length >= 2) {
+          showToast('Casillero al Máximo', 'Este casillero ya cuenta con 2 Refuerzos (Blindaje Total).', 'fa-solid fa-circle-check');
+          return;
+        }
+
+        targetSlot.reinforcements.push(card);
+        const newCount = targetSlot.reinforcements.length;
+        activeP.hand.splice(cardIdx, 1);
+        actionsRemaining--;
+        selectedCardUid = null;
+        playSound('reinforce');
+
+        if (newCount === 1) {
+          logTerminal(`✨ ${activeP.name} potenció ${secObj.name} con [${card.name}] (Nivel 1: Absorbe 1 Bug).`);
+          showToast('Refuerzo Nivel 1', `[${card.name}] absorberá el próximo sabotaje.`, 'fa-solid fa-shield-halved');
+        } else {
+          logTerminal(`🛡️ ¡BLINDAJE TOTAL! ${activeP.name} equipó el 2do Refuerzo [${card.name}] en ${secObj.name}. ¡Inmune a ataques!`);
+          showToast('¡Casillero Blindado!', `2 Refuerzos activos. Este casillero es ahora inmune a cualquier Bug.`, 'fa-solid fa-shield');
+        }
+
+        refreshGameViews();
+        return;
+      }
+    }
+
+    function refreshGameViews() {
+      renderPipelineSlots(1);
+      renderPipelineSlots(2);
+      renderHand(1);
+      renderHand(2);
+      updateTurnHeader();
+    }
+
+    function updatePlayerCounters(playerNum) {
+      const p = players[playerNum];
+      if (!p) return;
+      let filled = 0;
+      let bugsActive = 0;
+
+      PIPELINE_SECTIONS.forEach(s => {
+        const slot = p.slots[s.id];
+        if (slot.component) filled++;
+        if (slot.bug) bugsActive++;
+      });
+
+      const slotCounterEl = document.getElementById(`p${playerNum}-slot-counter`);
+      if (slotCounterEl) {
+        slotCounterEl.textContent = `${filled}/9 Espacios`;
+      }
+
+      const deployBtn = document.getElementById(`p${playerNum}-btn-deploy`);
+      if (deployBtn) {
+        const canDeploy = (filled === 9) && (bugsActive === 0) && p.taskFlipped;
+        deployBtn.disabled = !canDeploy;
+      }
+    }
+
+    function endTurn() {
+      while (players[activePlayer].hand.length < 4 && players[activePlayer].hand.length < MAX_HAND_SIZE && drawDeck.length > 0) {
+        drawCard(activePlayer, true);
+      }
+
+      activePlayer = activePlayer === 1 ? 2 : 1;
+      actionsRemaining = 2;
+      selectedCardUid = null;
+      playSound('flip');
+
+      logTerminal(`--- Turno de ${players[activePlayer].name} (2 Acciones disponibles) ---`);
+      updateTurnHeader();
+      refreshGameViews();
+    }
+
+    function updateTurnHeader() {
+      const playerLabel = document.getElementById('current-player-label');
+      if (playerLabel) playerLabel.textContent = players[activePlayer].name;
+
+      const actionsBadge = document.getElementById('actions-left-badge');
+      if (actionsBadge) actionsBadge.textContent = actionsRemaining;
+
+      const deckCount = document.getElementById('deck-count-text');
+      if (deckCount) deckCount.textContent = drawDeck.length;
+
+      const pill = document.getElementById('turn-indicator-pill');
+      const arena1 = document.getElementById('player1-arena');
+      const arena2 = document.getElementById('player2-arena');
+      const p1Active = document.getElementById('p1-active-pill');
+      const p2Active = document.getElementById('p2-active-pill');
+
+      if (activePlayer === 1) {
+        if (pill) pill.className = "inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-700";
+        if (arena1) arena1.className = "relative rounded-2xl border-2 border-cyan-500 bg-slate-900/80 p-3 sm:p-4 flex flex-col justify-between transition-all duration-300 shadow-xl ring-1 ring-cyan-500/20";
+        if (arena2) arena2.className = "relative rounded-2xl border-2 border-slate-800 bg-slate-900/40 p-3 sm:p-4 flex flex-col justify-between transition-all duration-300 opacity-60";
+        if (p1Active) p1Active.classList.remove('hidden');
+        if (p2Active) p2Active.classList.add('hidden');
+      } else {
+        if (pill) pill.className = "inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-rose-950 text-rose-300 border border-rose-700";
+        if (arena2) arena2.className = "relative rounded-2xl border-2 border-rose-500 bg-slate-900/80 p-3 sm:p-4 flex flex-col justify-between transition-all duration-300 shadow-xl ring-1 ring-rose-500/20";
+        if (arena1) arena1.className = "relative rounded-2xl border-2 border-slate-800 bg-slate-900/40 p-3 sm:p-4 flex flex-col justify-between transition-all duration-300 opacity-60";
+        if (p2Active) p2Active.classList.remove('hidden');
+        if (p1Active) p1Active.classList.add('hidden');
+      }
+    }
+
+    function checkVictory(playerNum) {
+      const p = players[playerNum];
+      let filled = 0;
+      let bugs = 0;
+
+      PIPELINE_SECTIONS.forEach(s => {
+        const slot = p.slots[s.id];
+        if (slot.component) filled++;
+        if (slot.bug) bugs++;
+      });
+
+      if (!p.taskFlipped) {
+        showToast('Tarea no revelada', 'Debes voltear tu carta de Tarea arriba antes de poder desplegar.', 'fa-solid fa-eye', true);
+        return;
+      }
+      if (filled < 9) {
+        showToast('Pipeline Incompleto', `Llevas ${filled}/9 casilleros ocupados. Completa los 9 para desplegar.`, 'fa-solid fa-triangle-exclamation', true);
+        return;
+      }
+      if (bugs > 0) {
+        showToast('Bugs Activos', `Tienes ${bugs} bug(s) activo(s). Neutralízalos con Refuerzos (Col 4) antes de enviar a Producción.`, 'fa-solid fa-bug', true);
+        return;
+      }
+
+      playSound('victory');
+      logTerminal(`🏆 ¡VICTORIA! ¡${p.name} ha desplegado su modelo de ${p.task.name} en producción!`);
+
+      const modal = document.createElement('div');
+      modal.className = "fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4";
+      modal.innerHTML = `
+        <div class="bg-slate-900 border-2 border-cyan-500 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl space-y-4">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 text-3xl shadow-lg shadow-cyan-500/30 animate-bounce">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+          <h3 class="text-2xl font-black text-white">¡Modelo Desplegado!</h3>
+          <p class="text-sm font-semibold text-cyan-300">
+            ¡Felicitaciones, ${p.name}!
+          </p>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Has completado con éxito tu arquitectura para <strong>${p.task.name}</strong>, protegido tus casilleros con Refuerzos de Calidad y blindado tu pipeline contra sabotajes.
+          </p>
+          <div class="pt-3">
+            <button id="btn-restart" class="px-6 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-indigo-500/30 transition cursor-pointer">
+              <i class="fa-solid fa-rotate-right mr-1.5"></i> Jugar Nueva Partida
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      modal.querySelector('#btn-restart').onclick = () => {
+        document.body.removeChild(modal);
+        resetFullGame();
+      };
+    }
+
+    function resetFullGame() {
+      const p1Wrap = document.getElementById('p1-task-card-wrap');
+      const p2Wrap = document.getElementById('p2-task-card-wrap');
+      if (p1Wrap) p1Wrap.classList.remove('flipped');
+      if (p2Wrap) p2Wrap.classList.remove('flipped');
+
+      initializeGame();
+    }
+
+    function populateCompendiumTable() {
+      const tbody = document.getElementById('compendium-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      PIPELINE_SECTIONS.forEach(sec => {
+        const col2Cards = MASTER_CARDS.filter(c => c.section === sec.id && c.column === 2);
+        const col3Cards = MASTER_CARDS.filter(c => c.section === sec.id && c.column === 3);
+        const col4Cards = MASTER_CARDS.filter(c => c.section === sec.id && c.column === 4);
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition-colors";
+        tr.innerHTML = `
+          <td class="p-2.5 font-bold text-slate-200 border-r border-slate-800 flex items-center gap-1.5">
+            <span class="w-4 h-4 rounded bg-slate-800 flex items-center justify-center text-[10px] text-cyan-400 font-mono-code">${sec.order}</span>
+            ${sec.name}
+          </td>
+          <td class="p-2.5 border-r border-slate-800 text-blue-200">
+            ${col2Cards.map(c => `<div>• <strong>${c.name}</strong> <span class="text-[10px] text-slate-400">(${c.desc})</span></div>`).join('')}
+          </td>
+          <td class="p-2.5 border-r border-slate-800 text-rose-200">
+            ${col3Cards.map(c => `<div>• <strong>${c.name}</strong> <span class="text-[10px] text-slate-400">(${c.desc})</span></div>`).join('')}
+          </td>
+          <td class="p-2.5 text-emerald-200">
+            ${col4Cards.map(c => `<div>• <strong>${c.name}</strong> <span class="text-[10px] text-slate-400">(${c.desc})</span></div>`).join('')}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function setupEventListeners() {
+      const drawBtn = document.getElementById('btn-draw-card-top');
+      if (drawBtn) {
+        drawBtn.onclick = () => {
+          if (actionsRemaining <= 0) {
+            showToast('Sin acciones', 'Pasa turno para recargar tus 2 acciones.', 'fa-solid fa-ban', true);
+            return;
+          }
+          if (players[activePlayer].hand.length >= MAX_HAND_SIZE) {
+            showToast('Límite de Mano', `Tienes ${MAX_HAND_SIZE} cartas en mano (máximo permitido). Juega cartas antes de robar más.`, 'fa-solid fa-hand-sparkles', true);
+            return;
+          }
+          const card = drawCard(activePlayer);
+          if (card) {
+            actionsRemaining--;
+            updateTurnHeader();
+            renderHand(activePlayer);
+            logTerminal(`${players[activePlayer].name} robó 1 carta del mazo (${players[activePlayer].hand.length}/${MAX_HAND_SIZE} en mano).`);
+          }
+        };
+      }
+
+      const endTurnBtn = document.getElementById('btn-end-turn-top');
+      if (endTurnBtn) {
+        endTurnBtn.onclick = endTurn;
+      }
+
+      const p1Deploy = document.getElementById('p1-btn-deploy');
+      if (p1Deploy) p1Deploy.onclick = () => checkVictory(1);
+
+      const p2Deploy = document.getElementById('p2-btn-deploy');
+      if (p2Deploy) p2Deploy.onclick = () => checkVictory(2);
+
+      const bgmBtn = document.getElementById('btn-bgm-toggle');
+      if (bgmBtn) {
+        bgmBtn.onclick = toggleRetroBgm;
+      }
+
+      const soundBtn = document.getElementById('btn-sound-toggle');
+      if (soundBtn) {
+        soundBtn.onclick = () => {
+          soundEnabled = !soundEnabled;
+          const icon = document.getElementById('sound-icon');
+          if (icon) {
+            icon.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+          }
+          showToast('Sonido', soundEnabled ? 'Efectos sonoros activados' : 'Sonido silenciado');
+        };
+      }
+
+      const rulesModal = document.getElementById('rules-modal');
+      const openRules = document.getElementById('btn-open-rules');
+      const closeRules = document.getElementById('btn-close-rules');
+      const closeRulesFooter = document.getElementById('btn-close-rules-footer');
+
+      if (openRules && rulesModal) openRules.onclick = () => rulesModal.classList.remove('hidden');
+      if (closeRules && rulesModal) closeRules.onclick = () => rulesModal.classList.add('hidden');
+      if (closeRulesFooter && rulesModal) closeRulesFooter.onclick = () => rulesModal.classList.add('hidden');
+
+      const compendiumModal = document.getElementById('compendium-modal');
+      const openCompendium = document.getElementById('btn-open-compendium');
+      const closeCompendium = document.getElementById('btn-close-compendium');
+      const closeCompendiumFooter = document.getElementById('btn-close-compendium-footer');
+
+      if (openCompendium && compendiumModal) openCompendium.onclick = () => compendiumModal.classList.remove('hidden');
+      if (closeCompendium && compendiumModal) closeCompendium.onclick = () => compendiumModal.classList.add('hidden');
+      if (closeCompendiumFooter && compendiumModal) closeCompendiumFooter.onclick = () => compendiumModal.classList.add('hidden');
+
+      window.onkeydown = (e) => {
+        if (e.key === 'Escape') {
+          if (rulesModal) rulesModal.classList.add('hidden');
+          if (compendiumModal) compendiumModal.classList.add('hidden');
+        }
+      };
+    }
+
+    function startApplication() {
+      setupEventListeners();
+      setupTaskCards();
+      initializeGame();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startApplication);
+    } else {
+      startApplication();
+    }
+  </script>
+</body>
+</html>
